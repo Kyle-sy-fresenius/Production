@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Production Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(to right,#4facfe,#00c6ff);
+  color:white;
+  text-align:center;
+  padding:25px;
+}
+
+.card{
+  position:relative;
+  width:760px;
+  margin:auto;
+  padding:20px;
+  border-radius:15px;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(10px);
+}
+
+#dateTimeBox{
+  position:absolute;
+  top:12px;
+  right:18px;
+  font-size:13px;
+  font-weight:bold;
+  text-align:right;
+}
+
+.machine{
+  position:absolute;
+  top:12px;
+  left:18px;
+  font-size:24px;
+  animation:machineRun 0.7s infinite alternate;
+}
+
+@keyframes machineRun{
+  from{ transform:translateX(0) rotate(-2deg); }
+  to{ transform:translateX(4px) rotate(2deg); }
+}
+
+input,button,textarea{
+  padding:10px;
+  border:none;
+  border-radius:6px;
+  margin:8px;
+}
+
+button{
+  background:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.frame{
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  margin-top:20px;
+}
+
+.panel{
+  width:48%;
+  height:260px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border:2px solid white;
+  border-radius:12px;
+  padding:12px;
+  box-sizing:border-box;
+}
+
+#statusRing,
+.smallRing{
+  width:160px;
+  height:160px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  font-size:15px;
+  text-align:center;
+  border:6px solid rgba(255,255,255,0.2);
+  box-shadow:0 0 20px rgba(255,255,255,0.2);
+  transition:0.3s;
+  padding:10px;
+  box-sizing:border-box;
+}
+
+.centerPanel{
+  position:relative;
+  width:48%;
+  height:260px;
+  border:2px solid white;
+  border-radius:12px;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+#chartBox{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:160px;
+  height:160px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#chart{
+  width:160px !important;
+  height:160px !important;
+  filter:
+    drop-shadow(0 0 12px rgba(0,170,255,0.45))
+    drop-shadow(0 0 10px rgba(255,59,59,0.35));
+}
+
+.recentMini{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  width:70px;
+  text-align:left;
+  font-size:14px;
+  line-height:22px;
+}
+
+.recentItem{
+  margin:3px 0;
+}
+
+.fade{
+  opacity:0.5;
+}
+
+#trackText{
+  margin-top:10px;
+  font-size:14px;
+}
+
+.lowerFrame{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:12px;
+  margin-top:12px;
+}
+
+.smallPanel{
+  height:240px;
+  border:2px solid white;
+  border-radius:12px;
+  padding:10px;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  position:relative;
+}
+
+.smallPanel h3{
+  margin:8px 0 8px 0;
+  font-size:18px;
+}
+
+.smallRing{
+  width:160px;
+  height:160px;
+  font-size:18px;
+}
+
+.staffRing{
+  border:6px solid red;
+  box-shadow:0 0 20px red;
+}
+
+.automationRing{
+  border:6px solid #00ff88;
+  box-shadow:0 0 20px #00ff88;
+}
+
+.staffContent,
+.automationContent{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+
+.staffLeft,
+.automationLeft{
+  width:55px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.staffLeft input{
+  width:48px;
+  padding:3px;
+  margin:0;
+  font-size:10px;
+}
+
+.staffLeft button,
+.automationLeft button{
+  width:48px;
+  padding:3px;
+  margin:0;
+  font-size:10px;
+}
+
+.staffList,
+.automationList{
+  width:70px;
+  text-align:left;
+  font-size:8px;
+  line-height:10px;
+  max-height:100px;
+  overflow:hidden;
+}
+
+.staffItem{
+  display:flex;
+  align-items:center;
+  gap:3px;
+  margin-bottom:2px;
+  opacity:0.95;
+}
+
+.onlineDot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#00ff88;
+  border:none;
+  cursor:pointer;
+  padding:0;
+  margin:0;
+  box-shadow:
+    0 0 5px #00ff88,
+    0 0 10px #00ff88,
+    0 0 15px #00ff88;
+  animation:pulseGlow 1.5s infinite;
+}
+
+.onlineDot.off{
+  background:#ff3b3b;
+  box-shadow:
+    0 0 5px #ff3b3b,
+    0 0 10px #ff3b3b,
+    0 0 15px #ff3b3b;
+}
+
+@keyframes pulseGlow{
+  0%{ transform:scale(1); opacity:1; }
+  50%{ transform:scale(1.25); opacity:0.7; }
+  100%{ transform:scale(1); opacity:1; }
+}
+
+#barChartBox{
+  width:220px;
+  height:150px;
+}
+
+#barChart{
+  width:220px !important;
+  height:150px !important;
+}
+
+#forumBox{
+  width:220px;
+  height:120px;
+  background:white;
+  color:black;
+  border-radius:8px;
+  padding:6px;
+  box-sizing:border-box;
+  overflow-y:auto;
+  text-align:left;
+  font-size:11px;
+}
+
+.forumComment{
+  background:#eeeeee;
+  border-radius:6px;
+  padding:5px;
+  margin-bottom:5px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.forumComment.highlighted{
+  background:#ffff00;
+  color:black;
+  box-shadow:
+    0 0 10px yellow,
+    0 0 20px yellow;
+  transform:scale(1.03);
+}
+
+.commentName{
+  font-weight:bold;
+  font-size:10px;
+}
+
+.commentText{
+  font-size:11px;
+}
+
+.buttonRow{
+  margin-top:15px;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+}
+
+#summaryScreen{
+  display:none;
+}
+
+.summaryBox{
+  margin-top:40px;
+  font-size:22px;
+  line-height:40px;
+}
+
+#sumStaffList{
+  font-size:16px;
+  line-height:24px;
+  margin-top:8px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Production Dashboard</h1>
+
+<div class="card">
+
+<div class="machine">⚙️</div>
+<div id="dateTimeBox"></div>
+
+<div id="startScreen">
+  <input id="totalInput" type="number" placeholder="Total units">
+  <button onclick="start()">Start</button>
+</div>
+
+<div id="mainScreen" style="display:none;">
+
+<div>Total: <span id="totalShow">0</span></div>
+<div>Packed: <span id="packedShow">0</span></div>
+<div>Remaining: <span id="remainingShow">0</span></div>
+
+<input id="addInput" type="number" placeholder="Add units">
+<button onclick="add()">Add</button>
+
+<div class="frame">
+
+<div class="panel">
+  <div id="statusRing">--</div>
+  <div id="trackText"></div>
+</div>
+
+<div class="centerPanel">
+  <div id="chartBox">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="recentMini" id="recentTop"></div>
+</div>
+
+</div>
+
+<div class="lowerFrame">
+
+  <div class="smallPanel">
+    <h3>Staff</h3>
+
+    <div class="staffContent">
+
+      <div class="staffLeft">
+        <input id="staffName" type="text" placeholder="Name">
+        <input id="staffHours" type="number" placeholder="Hrs">
+        <button onclick="addStaff()">Add</button>
+      </div>
+
+      <div class="smallRing staffRing" id="staffRing">
+        0h
+      </div>
+
+      <div class="staffList" id="staffList"></div>
+
+    </div>
+  </div>
+
+  <div class="smallPanel">
+    <h3>Automation</h3>
+
+    <div class="automationContent">
+
+      <div class="automationLeft">
+        <button onclick="addAutomation()">Add</button>
+      </div>
+
+      <div class="smallRing automationRing" id="automationRing">
+        540<br>MIN
+      </div>
+
+      <div class="automationList" id="automationList"></div>
+
+    </div>
+  </div>
+
+  <div class="smallPanel">
+    <h3>Units</h3>
+
+    <div id="barChartBox">
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+
+  <div class="smallPanel">
+    <h3>Forum</h3>
+
+    <div id="forumBox"></div>
+
+    <button onclick="openForumForm()">Add</button>
+  </div>
+
+</div>
+
+<div class="buttonRow">
+
+  <button onclick="viewSummary()" style="background:#00aaff;color:white;">
+    View Summary
+  </button>
+
+  <button onclick="endShift()" style="background:#ff4d4d;color:white;">
+    End Production
+  </button>
+
+</div>
+
+</div>
+
+<div id="summaryScreen">
+
+<h2>Shift Summary</h2>
+
+<div class="summaryBox">
+  Packed: <span id="sumPacked"></span><br>
+  Not Packed: <span id="sumNotPacked"></span><br>
+  Percentage: <span id="sumPercent"></span><br>
+  Staff Worked:<br>
+  <div id="sumStaffList"></div>
+</div>
+
+<button onclick="returnToDashboard()">
+  Back to Dashboard
+</button>
+
+<button onclick="backToDashboard()" style="background:#ff4d4d;color:white;">
+  Reset Dashboard
+</button>
+
+</div>
+
+</div>
+
+<script>
+const sb = supabase.createClient(
+  "https://afakpgezcpvvnvoqcthj.supabase.co",
+  "sb_publishable_n7KfiuQXIE_hekGgd3eXsQ_gEqaJ_9Y"
+);
+
+let total = 0;
+let packed = 0;
+let recent = [];
+let entries = [];
+let automationMinutes = 540;
+let automationEntries = [];
+let chart;
+let barChart;
+let started = false;
+
+async function load(){
+
+  const { data } = await sb
+    .from("production_dashboard")
+    .select("*")
+    .eq("id",1)
+    .single();
+
+  if(!data) return;
+
+  total = data.total || 0;
+  packed = data.packed || 0;
+  recent = data.recent_adds || [];
+  entries = data.entries || [];
+  automationMinutes = data.automation_minutes ?? 540;
+  automationEntries = data.automation_entries || [];
+
+  started = total > 0;
+
+  showMain();
+  createChart();
+  createBarChart();
+  update();
+  renderRecent();
+  updateBarChart();
+  renderAutomation();
+}
+
+load();
+
+function start(){
+
+  total = parseFloat(totalInput.value);
+
+  if(isNaN(total) || total <= 0) return;
+
+  packed = 0;
+  recent = [];
+  entries = [];
+  automationMinutes = 540;
+  automationEntries = [];
+  started = true;
+
+  save();
+  showMain();
+  createChart();
+  createBarChart();
+  update();
+  renderRecent();
+  updateBarChart();
+  renderAutomation();
+}
+
+function add(){
+
+  let v = parseFloat(addInput.value);
+
+  if(isNaN(v) || v <= 0) return;
+
+  packed += v;
+
+  recent.unshift(v);
+
+  entries.push({
+    amount:v,
+    time:new Date().toISOString()
+  });
+
+  if(recent.length > 50) recent.pop();
+
+  addInput.value = "";
+
+  save();
+  update();
+  renderRecent();
+  updateBarChart();
+}
+
+function addStaff(){
+
+  const name = staffName.value.trim();
+  let hours = parseFloat(staffHours.value);
+
+  if(!name || isNaN(hours)) return;
+
+  if(hours === 13){
+    hours = 11;
+  }
+
+  if(hours === 8){
+    hours = 6.5;
+  }
+
+  const item = document.createElement("div");
+  let holdTimer;
+
+  item.className = "staffItem";
+
+  item.innerHTML = `
+    <button
+      class="onlineDot"
+      data-hours="${hours}"
+      onclick="toggleStaff(this)"
+    ></button>
+
+    <span>${name} - ${hours}h</span>
+  `;
+
+  item.addEventListener("pointerdown", () => {
+    holdTimer = setTimeout(() => {
+      item.remove();
+      updateStaffRing();
+    }, 700);
+  });
+
+  item.addEventListener("pointerup", () => {
+    clearTimeout(holdTimer);
+  });
+
+  item.addEventListener("pointerleave", () => {
+    clearTimeout(holdTimer);
+  });
+
+  staffList.prepend(item);
+
+  staffName.value = "";
+  staffHours.value = "";
+
+  updateStaffRing();
+}
+
+function toggleStaff(btn){
+
+  btn.classList.toggle("off");
+
+  updateStaffRing();
+}
+
+function updateStaffRing(){
+
+  const dots = document.querySelectorAll(".onlineDot");
+
+  let activeHours = 0;
+
+  dots.forEach(dot=>{
+
+    const hrs = parseFloat(dot.dataset.hours || 0);
+
+    if(!dot.classList.contains("off")){
+      activeHours += hrs;
+    }
+  });
+
+  const ring = document.getElementById("staffRing");
+
+  ring.innerText = activeHours.toFixed(1) + "h";
+
+  if(activeHours > 75){
+    ring.style.border = "6px solid #00ff88";
+    ring.style.boxShadow = "0 0 25px #00ff88";
+  }
+  else if(activeHours >= 70){
+    ring.style.border = "6px solid orange";
+    ring.style.boxShadow = "0 0 25px orange";
+  }
+  else{
+    ring.style.border = "6px solid red";
+    ring.style.boxShadow = "0 0 25px red";
+  }
+}
+
+function addAutomation(){
+
+  const reason = prompt("Enter reason:");
+
+  if(!reason) return;
+
+  const mins = parseFloat(prompt("Enter minutes:"));
+
+  if(isNaN(mins) || mins <= 0) return;
+
+  automationMinutes -= mins;
+
+  if(automationMinutes < 0){
+    automationMinutes = 0;
+  }
+
+  automationEntries.unshift({
+    reason,
+    mins
+  });
+
+  renderAutomation();
+  save();
+}
+
+function renderAutomation(){
+
+  automationRing.innerHTML =
+    automationMinutes + "<br>MIN";
+
+  if(automationMinutes === 540){
+    automationRing.style.border = "6px solid #00ff88";
+    automationRing.style.boxShadow = "0 0 25px #00ff88";
+  }
+  else if(automationMinutes >= 500){
+    automationRing.style.border = "6px solid orange";
+    automationRing.style.boxShadow = "0 0 25px orange";
+  }
+  else{
+    automationRing.style.border = "6px solid red";
+    automationRing.style.boxShadow = "0 0 25px red";
+  }
+
+  automationList.innerHTML = automationEntries
+    .slice(0,3)
+    .map(e => `
+      <div class="automationItem">
+        ${e.reason} - ${e.mins}m
+      </div>
+    `)
+    .join("");
+}
+
+function openForumForm(){
+
+  const name = prompt("Enter your name:");
+
+  if(!name) return;
+
+  const comment = prompt("Enter your comment:");
+
+  if(!comment) return;
+
+  addForumComment(name, comment);
+}
+
+function addForumComment(name, comment){
+
+  const item = document.createElement("div");
+  let holdTimer;
+
+  item.className = "forumComment";
+  item.dataset.name = name;
+
+  item.innerHTML = `
+    <div class="commentName">${name}</div>
+    <div class="commentText">${comment}</div>
+  `;
+
+  item.addEventListener("click", () => {
+    item.classList.toggle("highlighted");
+  });
+
+  item.addEventListener("pointerdown", () => {
+
+    holdTimer = setTimeout(() => {
+
+      const password = prompt("Enter password:");
+
+      if(password === item.dataset.name){
+        item.remove();
+      }
+      else{
+        alert("Incorrect password");
+      }
+
+    }, 700);
+
+  });
+
+  item.addEventListener("pointerup", () => {
+    clearTimeout(holdTimer);
+  });
+
+  item.addEventListener("pointerleave", () => {
+    clearTimeout(holdTimer);
+  });
+
+  forumBox.prepend(item);
+}
+
+async function save(){
+
+  await sb.from("production_dashboard").upsert({
+    id:1,
+    total,
+    packed,
+    recent_adds:recent,
+    entries,
+    automation_minutes:automationMinutes,
+    automation_entries:automationEntries
+  });
+}
+
+function showMain(){
+
+  startScreen.style.display = "none";
+  mainScreen.style.display = "block";
+  summaryScreen.style.display = "none";
+}
+
+function createChart(){
+
+  if(chart) return;
+
+  chart = new Chart(document.getElementById("chart"),{
+
+    type:"pie",
+
+    data:{
+      labels:["Packed","Remaining"],
+
+      datasets:[{
+        data:[0,total],
+
+        backgroundColor:[
+          "#00aaff",
+          "#ff3b3b"
+        ],
+
+        borderWidth:6,
+        borderColor:"rgba(255,255,255,0.08)",
+        hoverOffset:0
+      }]
+    },
+
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+
+      plugins:{
+        legend:{ display:false },
+
+        datalabels:{
+          color:"#fff",
+
+          font:{
+            weight:"bold",
+            size:16
+          },
+
+          formatter:(v,ctx)=>{
+
+            const d =
+              ctx.chart.data.datasets[0].data;
+
+            const sum = d[0] + d[1];
+
+            return sum
+              ? ((v/sum)*100).toFixed(0)+"%"
+              : "0%";
+          }
+        }
+      }
+    },
+
+    plugins:[ChartDataLabels]
+  });
+}
+
+function createBarChart(){
+
+  if(barChart) return;
+
+  barChart = new Chart(document.getElementById("barChart"),{
+
+    type:"bar",
+
+    data:{
+      labels:["☀️ Morning","🌤️ Afternoon","🌙 Night"],
+
+      datasets:[{
+        data:[0,0,0],
+
+        backgroundColor:[
+          "#00aaff",
+          "#ffaa00",
+          "#6a5cff"
+        ],
+
+        borderRadius:6
+      }]
+    },
+
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+
+      plugins:{
+        legend:{ display:false },
+        datalabels:{ display:false }
+      },
+
+      scales:{
+        x:{
+          ticks:{
+            color:"white",
+            font:{ size:11 }
+          },
+          grid:{ display:false }
+        },
+
+        y:{
+          ticks:{
+            color:"white",
+            font:{ size:10 }
+          },
+          grid:{
+            color:"rgba(255,255,255,0.2)"
+          }
+        }
+      }
+    }
+  });
+}
+
+function updateBarChart(){
+
+  if(!barChart) return;
+
+  let morning = 0;
+  let afternoon = 0;
+  let night = 0;
+
+  entries.forEach(entry=>{
+
+    const d = new Date(entry.time);
+
+    const minutes =
+      d.getHours() * 60 + d.getMinutes();
+
+    if(minutes >= 8 * 60 + 30 && minutes < 13 * 60 + 30){
+      morning += entry.amount;
+    }
+    else if(minutes >= 13 * 60 + 30 && minutes < 18 * 60){
+      afternoon += entry.amount;
+    }
+    else if(minutes >= 18 * 60 && minutes <= 21 * 60 + 30){
+      night += entry.amount;
+    }
+  });
+
+  barChart.data.datasets[0].data = [
+    morning,
+    afternoon,
+    night
+  ];
+
+  barChart.update();
+}
+
+function update(){
+
+  totalShow.innerText = total;
+  packedShow.innerText = packed;
+
+  remainingShow.innerText =
+    Math.max(total-packed,0);
+
+  chart.data.datasets[0].data = [
+    Math.min(packed,total),
+    Math.max(total-packed,0)
+  ];
+
+  chart.update();
+
+  const ring =
+    document.getElementById("statusRing");
+
+  const now = new Date();
+
+  const minutes =
+    now.getHours() * 60 + now.getMinutes();
+
+  let target = 0;
+
+  if(minutes >= 20 * 60){
+    target = 10000;
+  }
+  else if(minutes >= 15 * 60 + 30){
+    target = 5000;
+  }
+  else if(minutes >= 13 * 60){
+    target = 3500;
+  }
+  else if(minutes >= 11 * 60){
+    target = 2000;
+  }
+  else{
+    target = 2000;
+  }
+
+  const progress = packed / target;
+
+  if(!started){
+
+    ring.innerText = "--";
+
+    ring.style.border =
+      "6px solid rgba(255,255,255,0.2)";
+
+    ring.style.boxShadow =
+      "0 0 20px rgba(255,255,255,0.2)";
+
+    trackText.innerText = "";
+  }
+
+  else if(packed >= total && total > 0){
+
+    ring.innerText = "100% COMPLETE";
+
+    ring.style.border =
+      "6px solid #00ff88";
+
+    ring.style.boxShadow =
+      "0 0 25px #00ff88";
+
+    trackText.innerText = "Finished";
+  }
+
+  else if(progress >= 1){
+
+    ring.innerText = "ON TRACK";
+
+    ring.style.border =
+      "6px solid #00ff88";
+
+    ring.style.boxShadow =
+      "0 0 20px #00ff88";
+
+    trackText.innerText = "Green reached";
+  }
+
+  else if(progress >= 0.75){
+
+    ring.innerText =
+      Math.ceil(target - packed) +
+      " UNITS TO GREEN";
+
+    ring.style.border =
+      "6px solid orange";
+
+    ring.style.boxShadow =
+      "0 0 20px orange";
+
+    trackText.innerText =
+      "Current target: " + target;
+  }
+
+  else{
+
+    ring.innerText =
+      Math.ceil(target - packed) +
+      " UNITS TO GREEN";
+
+    ring.style.border =
+      "6px solid red";
+
+    ring.style.boxShadow =
+      "0 0 25px red";
+
+    trackText.innerText =
+      "Current target: " + target;
+  }
+}
+
+function renderRecent(){
+
+  const last4 = recent.slice(0,4);
+
+  recentTop.innerHTML = last4.length
+    ? last4.map((v,i)=>`
+        <div class="recentItem ${i===0?'':'fade'}">
+          +${v}
+        </div>
+      `).join("")
+    : `
+      <div class="recentItem fade">
+        No entries
+      </div>
+    `;
+}
+
+function viewSummary(){
+
+  let percent = total
+    ? ((packed/total)*100).toFixed(1)
+    : 0;
+
+  sumPacked.innerText = packed;
+
+  sumNotPacked.innerText =
+    Math.max(total - packed, 0);
+
+  sumPercent.innerText =
+    percent + "%";
+
+  const staffItems =
+    document.querySelectorAll(".staffItem");
+
+  let staffSummary = "";
+
+  staffItems.forEach(item=>{
+
+    const dot =
+      item.querySelector(".onlineDot");
+
+    const text =
+      item.querySelector("span").innerText;
+
+    if(dot.classList.contains("off")){
+      staffSummary += text + " - SICK<br>";
+    }
+    else{
+      staffSummary += text + "<br>";
+    }
+  });
+
+  sumStaffList.innerHTML =
+    staffSummary || "No staff added";
+
+  mainScreen.style.display = "none";
+  summaryScreen.style.display = "block";
+}
+
+function returnToDashboard(){
+
+  summaryScreen.style.display = "none";
+  mainScreen.style.display = "block";
+}
+
+function endShift(){
+
+  const password =
+    prompt("Enter password:");
+
+  const allowed = [
+    "Kyle","Sofiya","Anjali",
+    "Osama","Elamari","Elham",
+    "Krithika","Niroshan",
+    "Lokesh","Netra"
+  ];
+
+  if(!allowed.includes(password)){
+    alert("Incorrect password");
+    return;
+  }
+
+  viewSummary();
+}
+
+async function backToDashboard(){
+
+  total = 0;
+  packed = 0;
+  recent = [];
+  entries = [];
+  automationMinutes = 540;
+  automationEntries = [];
+  started = false;
+
+  await sb.from("production_dashboard").upsert({
+    id:1,
+    total:0,
+    packed:0,
+    recent_adds:[],
+    entries:[],
+    automation_minutes:540,
+    automation_entries:[]
+  });
+
+  totalInput.value = "";
+  addInput.value = "";
+  staffList.innerHTML = "";
+  updateStaffRing();
+  renderAutomation();
+  updateBarChart();
+
+  summaryScreen.style.display = "none";
+  mainScreen.style.display = "none";
+  startScreen.style.display = "block";
+}
+
+function updateDateTime(){
+
+  const now = new Date();
+
+  const date = now.toLocaleDateString();
+
+  const time = now.toLocaleTimeString([], {
+    hour:"2-digit",
+    minute:"2-digit",
+    second:"2-digit",
+    hour12:false
+  });
+
+  dateTimeBox.innerHTML = date + "<br>" + time;
+}
+
+setInterval(updateDateTime, 1000);
+updateDateTime();
+</script>
+
+</body>
+</html>
+
+
